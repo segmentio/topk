@@ -99,6 +99,23 @@ func TestHeavyKeeper(t *testing.T) {
 	}
 }
 
+func TestDecayAll(t *testing.T) {
+	hk := New(5, 0.9)
+	hk.Add("a", 3)
+	hk.Add("b", 6)
+	hk.Add("c", 13)
+	hk.Add("d", 25)
+	hk.Add("e", 50)
+	hk.Add("f", 100)
+
+	hk.DecayAll(0.3)
+	assert(t, []FlowCount{{"f", 70}, {"e", 35}, {"d", 17}, {"c", 9}, {"b", 4}}, hk.Top())
+
+	hk.DecayAll(0.9)
+	hk.DecayAll(0.9)
+	assert(t, []FlowCount{}, hk.Top())
+}
+
 func TestReset(t *testing.T) {
 	hk := New(5, 0.9)
 	hk.Add("a", 1)

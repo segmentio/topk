@@ -164,6 +164,27 @@ func (hk *HeavyKeeper) Count(flow string) (count uint32, ok bool) {
 	return 0, false
 }
 
+// DecayAll decays all flows by the given percentage.
+func (hk *HeavyKeeper) DecayAll(pct float64) {
+	if pct <= 0 {
+		return
+	} else if pct > 1 {
+		hk.Reset()
+		return
+	}
+
+	pct = 1 - pct
+
+	for _, row := range hk.buckets {
+		for i := range row {
+			row[i].count = uint32(float64(row[i].count) * pct)
+		}
+	}
+	for i := range hk.heap {
+		hk.heap[i].Count = uint32(float64(hk.heap[i].Count) * pct)
+	}
+}
+
 // Reset returns the HeavyKeeper to a like-new state with no flows and no
 // counts.
 func (hk *HeavyKeeper) Reset() {
