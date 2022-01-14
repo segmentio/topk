@@ -61,12 +61,9 @@ func New(k int, decay float64) *HeavyKeeper {
 	}
 }
 
-// Add increments the given flow's count by the given amount.
-func (hk *HeavyKeeper) Add(flow string, incr uint32) {
-	if incr == 0 {
-		return
-	}
-
+// Sample increments the given flow's count by the given amount. It returns
+// true if the flow is in the top K elements.
+func (hk *HeavyKeeper) Sample(flow string, incr uint32) bool {
 	fp := fingerprint(flow)
 	var maxCount uint32
 	heapMin := hk.heap.Min()
@@ -107,7 +104,10 @@ func (hk *HeavyKeeper) Add(flow string, incr uint32) {
 			hk.heap[0].Count = maxCount
 			heap.Fix(&hk.heap, 0)
 		}
+		return true
 	}
+
+	return false
 }
 
 func fingerprint(flow string) uint32 {

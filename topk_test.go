@@ -21,6 +21,7 @@ func format(flowCounts []FlowCount) string {
 }
 
 func assert(t *testing.T, expect, given []FlowCount) {
+	t.Helper()
 	if len(expect) != len(given) {
 		t.Fatalf("expected %d items, got %d:\nexpect: %s\ngot:    %s", len(expect), len(given), format(expect), format(given))
 	} else {
@@ -92,21 +93,43 @@ func TestHeavyKeeper(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			hk := New(test.k, 0.9)
 			for _, fc := range test.given {
-				hk.Add(fc.Flow, fc.Count)
+				hk.Sample(fc.Flow, fc.Count)
 			}
 			assert(t, test.expect, hk.Top())
 		})
 	}
 }
 
+func TestSample_returnValue(t *testing.T) {
+	hk := New(2, 0.9)
+
+	assert := func(key string, expect bool) {
+		t.Helper()
+		got := hk.Sample(key, 1)
+		if got != expect {
+			t.Fatalf("for key %s, expected %v, got %v", key, expect, got)
+		}
+	}
+
+	assert("a", true)
+	assert("a", true)
+	assert("a", true)
+
+	assert("b", true)
+	assert("b", true)
+
+	assert("c", false)
+	assert("c", true)
+}
+
 func TestDecayAll(t *testing.T) {
 	hk := New(5, 0.9)
-	hk.Add("a", 3)
-	hk.Add("b", 6)
-	hk.Add("c", 13)
-	hk.Add("d", 25)
-	hk.Add("e", 50)
-	hk.Add("f", 100)
+	hk.Sample("a", 3)
+	hk.Sample("b", 6)
+	hk.Sample("c", 13)
+	hk.Sample("d", 25)
+	hk.Sample("e", 50)
+	hk.Sample("f", 100)
 
 	hk.DecayAll(0.3)
 	assert(t, []FlowCount{{"f", 70}, {"e", 35}, {"d", 17}, {"c", 9}, {"b", 4}}, hk.Top())
@@ -118,14 +141,14 @@ func TestDecayAll(t *testing.T) {
 
 func TestReset(t *testing.T) {
 	hk := New(5, 0.9)
-	hk.Add("a", 1)
-	hk.Add("b", 2)
-	hk.Add("c", 3)
+	hk.Sample("a", 1)
+	hk.Sample("b", 2)
+	hk.Sample("c", 3)
 	hk.Reset()
 	assert(t, []FlowCount{}, hk.Top())
 }
 
-func BenchmarkAdd(b *testing.B) {
+func BenchmarkSample(b *testing.B) {
 	flows := make([]string, 1_000_000)
 	for i := range flows {
 		flows[i] = randString(24)
@@ -142,7 +165,7 @@ func BenchmarkAdd(b *testing.B) {
 			hk := New(k, 0.9)
 			b.ResetTimer()
 			for _, flow := range flows[:b.N] {
-				hk.Add(flow, 1)
+				hk.Sample(flow, 1)
 			}
 		})
 	}
