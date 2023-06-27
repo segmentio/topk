@@ -184,8 +184,8 @@ func (hk *HeavyKeeper) DecayAll(pct float64) {
 	buckets, width := hk.buckets, hk.width
 	for i := 0; i < hk.depth; i++ {
 		row := buckets[i*width : i*width+width]
-		for i := range row {
-			row[i].count = uint32(float64(row[i].count) * pct)
+		for j := range row {
+			row[j].count = uint32(float64(row[j].count) * pct)
 		}
 	}
 	for i := range hk.heap {
