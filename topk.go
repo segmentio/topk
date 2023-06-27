@@ -141,8 +141,11 @@ func (a byCount) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a byCount) Less(i, j int) bool { return a[i].Count < a[j].Count }
 
 func (hk *HeavyKeeper) Top() []FlowCount {
-	top := make([]FlowCount, len(hk.heap))
-	copy(top, hk.heap)
+	return hk.TopInto(nil)
+}
+
+func (hk *HeavyKeeper) TopInto(top []FlowCount) []FlowCount {
+	top = append(top[:0], hk.heap...)
 	sort.Stable(sort.Reverse(byCount(top)))
 
 	// Trim off empty values
