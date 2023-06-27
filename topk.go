@@ -16,7 +16,9 @@ import (
 // HeavyKeeper is not safe for concurrent use.
 type HeavyKeeper struct {
 	decay   float64
-	buckets [][]bucket
+	depth   int
+	width   int
+	buckets []bucket
 	heap    minHeap
 }
 
@@ -49,13 +51,12 @@ func New(k int, decay float64) *HeavyKeeper {
 		depth = 3
 	}
 
-	buckets := make([][]bucket, depth)
-	for i := range buckets {
-		buckets[i] = make([]bucket, width)
-	}
+	buckets := make([]bucket, depth*width)
 
 	return &HeavyKeeper{
 		decay:   decay,
+		depth:   depth,
+		width:   width,
 		buckets: buckets,
 		heap:    make(minHeap, k),
 	}
@@ -68,7 +69,9 @@ func (hk *HeavyKeeper) Sample(flow string, incr uint32) bool {
 	var maxCount uint32
 	heapMin := hk.heap.Min()
 
-	for i, row := range hk.buckets {
+	buckets, width := hk.buckets, hk.width
+	for i := 0; i < hk.depth; i++ {
+		row := buckets[i*width : i*width+width]
 		j := slot(flow, uint32(i), uint32(len(row)))
 
 		if row[j].count == 0 {
@@ -175,7 +178,9 @@ func (hk *HeavyKeeper) DecayAll(pct float64) {
 
 	pct = 1 - pct
 
-	for _, row := range hk.buckets {
+	buckets, width := hk.buckets, hk.width
+	for i := 0; i < hk.depth; i++ {
+		row := buckets[i*width : i*width+width]
 		for i := range row {
 			row[i].count = uint32(float64(row[i].count) * pct)
 		}
@@ -188,10 +193,8 @@ func (hk *HeavyKeeper) DecayAll(pct float64) {
 // Reset returns the HeavyKeeper to a like-new state with no flows and no
 // counts.
 func (hk *HeavyKeeper) Reset() {
-	for _, row := range hk.buckets {
-		for i := range row {
-			row[i] = bucket{}
-		}
+	for i := range hk.buckets {
+		hk.buckets[i] = bucket{}
 	}
 	for i := range hk.heap {
 		hk.heap[i] = FlowCount{}
