@@ -69,25 +69,24 @@ func (hk *HeavyKeeper) Sample(flow string, incr uint32) bool {
 	var maxCount uint32
 	heapMin := hk.heap.Min()
 
-	buckets, width := hk.buckets, hk.width
-	for i := 0; i < hk.depth; i++ {
-		row := buckets[i*width : i*width+width]
-		j := slot(flow, uint32(i), uint32(len(row)))
+	buckets, width, depth := hk.buckets, hk.width, hk.depth
+	for i := 0; i < depth; i++ {
+		j := int(slot(flow, uint32(i), uint32(width))) + i*width
 
-		if row[j].count == 0 {
-			row[j].fingerprint = fp
-			row[j].count = incr
+		if buckets[j].count == 0 {
+			buckets[j].fingerprint = fp
+			buckets[j].count = incr
 			maxCount = max(maxCount, incr)
-		} else if row[j].fingerprint == fp {
-			row[j].count += incr
-			maxCount = max(maxCount, row[j].count)
+		} else if buckets[j].fingerprint == fp {
+			buckets[j].count += incr
+			maxCount = max(maxCount, buckets[j].count)
 		} else {
 			for localIncr := incr; localIncr > 0; localIncr-- {
-				if rand.Float64() < math.Pow(hk.decay, float64(row[j].count)) {
-					row[j].count--
-					if row[j].count <= 0 {
-						row[j].fingerprint = fp
-						row[j].count = localIncr
+				if rand.Float64() < math.Pow(hk.decay, float64(buckets[j].count)) {
+					buckets[j].count--
+					if buckets[j].count <= 0 {
+						buckets[j].fingerprint = fp
+						buckets[j].count = localIncr
 						maxCount = max(maxCount, localIncr)
 						break
 					}
@@ -181,12 +180,8 @@ func (hk *HeavyKeeper) DecayAll(pct float64) {
 
 	pct = 1 - pct
 
-	buckets, width := hk.buckets, hk.width
-	for i := 0; i < hk.depth; i++ {
-		row := buckets[i*width : i*width+width]
-		for j := range row {
-			row[j].count = uint32(float64(row[j].count) * pct)
-		}
+	for i := range hk.buckets {
+		hk.buckets[i].count = uint32(float64(hk.buckets[i].count) * pct)
 	}
 	for i := range hk.heap {
 		hk.heap[i].Count = uint32(float64(hk.heap[i].Count) * pct)
