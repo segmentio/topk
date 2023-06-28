@@ -16,8 +16,8 @@ import (
 // HeavyKeeper is not safe for concurrent use.
 type HeavyKeeper struct {
 	decay   float64
-	depth   int
-	width   int
+	depth   uint32
+	width   uint32
 	buckets []bucket
 	heap    minHeap
 }
@@ -41,12 +41,12 @@ func New(k int, decay float64) *HeavyKeeper {
 		panic("decay must be in range (0, 1.0]")
 	}
 
-	width := int(float64(k) * math.Log(float64(k)))
+	width := uint32(float64(k) * math.Log(float64(k)))
 	if width < 256 {
 		width = 256
 	}
 
-	depth := int(math.Log(float64(k)))
+	depth := uint32(math.Log(float64(k)))
 	if depth < 3 {
 		depth = 3
 	}
@@ -70,8 +70,8 @@ func (hk *HeavyKeeper) Sample(flow string, incr uint32) bool {
 	heapMin := hk.heap.Min()
 
 	buckets, width, depth := hk.buckets, hk.width, hk.depth
-	for i := 0; i < depth; i++ {
-		j := int(slot(flow, uint32(i), uint32(width))) + i*width
+	for i := uint32(0); i < depth; i++ {
+		j := slot(flow, i, width) + i*width
 
 		if buckets[j].count == 0 {
 			buckets[j].fingerprint = fp
